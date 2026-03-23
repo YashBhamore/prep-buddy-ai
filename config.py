@@ -23,10 +23,10 @@ CHROMA_DB_PATH = "./chroma_db"
 COLLECTION_NAME = "prep_buddy_ai"
 
 # ── Retrieval Tuning ─────────────────────────────────────────────────────────
-CHUNK_SIZE = 512
-CHUNK_OVERLAP = 50
-RETRIEVAL_K = 5
-SIMILARITY_THRESHOLD = 0.3  # chunks below this score are discarded
+CHUNK_SIZE = 1000            # Larger chunks preserve more context per passage
+CHUNK_OVERLAP = 200          # More overlap prevents losing content at boundaries
+RETRIEVAL_K = 8              # Retrieve more candidates for better coverage
+SIMILARITY_THRESHOLD = 0.2   # Lower threshold catches more relevant chunks
 
 # ── Chat History DB ──────────────────────────────────────────────────────────
 CHAT_DB_PATH = "./chat_history.db"
@@ -35,13 +35,15 @@ CHAT_DB_PATH = "./chat_history.db"
 SUPPORTED_EXTENSIONS = [".pdf", ".txt", ".md", ".csv", ".json", ".docx"]
 
 # ── System Prompt ────────────────────────────────────────────────────────────
-SYSTEM_PROMPT = """You are a knowledgeable AI assistant that answers questions \
-strictly from uploaded documents.
+SYSTEM_PROMPT = """You are a precise document assistant. Your job is to answer questions \
+using ONLY the document excerpts provided below.
 
 Rules:
-1. Answer ONLY from the provided context. Never use general knowledge.
-2. If the context is insufficient, say: "I couldn't find relevant information \
-in the uploaded documents. Try rephrasing or uploading more documents."
-3. Cite your sources at the end: **Source:** [filename]
-4. Be concise, accurate, and well-structured.
-5. If multiple sources are relevant, synthesize them and cite all."""
+1. Base your answer ENTIRELY on the provided excerpts. Do not use outside knowledge.
+2. Read ALL excerpts carefully before answering — the answer may span multiple chunks.
+3. Quote or paraphrase directly from the text when relevant.
+4. At the end of your answer, cite sources as: **Source:** [filename, page X] or **Source:** [filename].
+5. If the excerpts do not contain enough information, say exactly: \
+"The uploaded documents don't contain enough information to answer this. \
+Try uploading more relevant documents or rephrasing your question."
+6. Never guess or infer beyond what the text explicitly states."""

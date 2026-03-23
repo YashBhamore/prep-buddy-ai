@@ -15,7 +15,6 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_community.document_loaders import (
-    PyPDFLoader,
     TextLoader,
     UnstructuredMarkdownLoader,
 )
@@ -62,21 +61,61 @@ def load_file(uploaded_file) -> list[Document]:
 
     try:
         if suffix == ".pdf":
-            loader = PyPDFLoader(tmp_path)
+            docs = _load_pdf(tmp_path, uploaded_file.name)
         elif suffix == ".md":
             loader = UnstructuredMarkdownLoader(tmp_path)
+            docs = loader.load()
+            for doc in docs:
+                doc.metadata["source"] = uploaded_file.name
         elif suffix == ".txt":
             loader = TextLoader(tmp_path, encoding="utf-8")
+            docs = loader.load()
+            for doc in docs:
+                doc.metadata["source"] = uploaded_file.name
         else:
             raise ValueError(f"Unhandled type: {suffix}")
 
-        docs = loader.load()
-        for doc in docs:
-            doc.metadata["source"] = uploaded_file.name
         return docs
 
     finally:
         os.unlink(tmp_path)
+
+
+def _load_pdf(tmp_path: str, filename: str) -> list[Document]:
+    """
+    Load PDF with PyMuPDF (fitz) for best text extraction, falling back to PyPDFLoader.
+    Preserves page numbers in metadata for source citations.
+    """
+    # Try PyMuPDF first — far better at extracting text from complex PDFs
+    try:
+        import fitz  # PyMuPDF
+        pdf = fitz.open(tmp_path)
+        docs = []
+        for page_num, page in enumerate(pdf, start=1):
+            text = page.get_text("text").strip()
+            if text:
+                docs.append(Document(
+                    page_content=text,
+                    metadata={"source": filename, "page": page_num},
+                ))
+        pdf.close()
+        if docs:
+            return docs
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # Fallback: PyPDFLoader (LangChain built-in)
+    from langchain_community.document_loaders import PyPDFLoader
+    loader = PyPDFLoader(tmp_path)
+    docs = loader.load()
+    for doc in docs:
+        doc.metadata["source"] = filename
+        # Normalize page number — PyPDFLoader uses 0-indexed "page" key
+        if "page" in doc.metadata:
+            doc.metadata["page"] = doc.metadata["page"] + 1
+    return docs
 
 
 def _load_csv(uploaded_file) -> list[Document]:
@@ -162,10 +201,15 @@ def _load_docx(uploaded_file) -> list[Document]:
 
 
 def chunk_documents(docs: list[Document]) -> list[Document]:
-    """Split documents into retrieval-sized chunks."""
+    """Split documents into retrieval-sized chunks with smart separators."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", ". ", " ", ""],
+        # Try to split at natural boundaries: paragraphs → sentences → words
+        separators=["\n\n", "\n", ". ", "? ", "! ", ", ", " ", ""],
+        length_function=len,
+        is_separator_regex=False,
     )
-    return splitter.split_documents(docs)
+    chunks = splitter.split_documents(docs)
+    # Filter out near-empty chunks that provide no retrieval value
+    return [c for c in chunks if len(c.page_content.strip()) >= 50]

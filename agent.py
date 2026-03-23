@@ -69,9 +69,10 @@ def generate_node(state: AgentState) -> dict:
 
     # Build context from retrieved chunks
     context_parts = []
-    for chunk in state["retrieved_chunks"]:
+    for idx, chunk in enumerate(state["retrieved_chunks"], start=1):
         context_parts.append(
-            f"[Source: {chunk['source']} | Relevance: {chunk['score']}]\n{chunk['text']}"
+            f"[Excerpt {idx} | Source: {chunk['source']} | Relevance: {chunk['score']}]\n"
+            f"{chunk['text']}"
         )
     context = "\n\n---\n\n".join(context_parts)
 
@@ -137,9 +138,10 @@ def chat_stream(query: str, history: list[dict]) -> Generator[str, None, None]:
 
     # Step 2: Build context
     context_parts = []
-    for chunk in chunks:
+    for idx, chunk in enumerate(chunks, start=1):
         context_parts.append(
-            f"[Source: {chunk['source']} | Relevance: {chunk['score']}]\n{chunk['text']}"
+            f"[Excerpt {idx} | Source: {chunk['source']} | Relevance: {chunk['score']}]\n"
+            f"{chunk['text']}"
         )
     context = "\n\n---\n\n".join(context_parts)
 

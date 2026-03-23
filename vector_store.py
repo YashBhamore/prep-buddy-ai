@@ -42,9 +42,12 @@ def get_chroma_collection():
     )
 
 
+_INGEST_BATCH_SIZE = 32  # Number of chunks to embed and store at once
+
+
 def ingest_documents(uploaded_files) -> dict:
     """
-    Full pipeline: load → chunk → embed → store.
+    Full pipeline: load → chunk → embed (batched) → store.
     Returns summary with counts.
     """
     collection = get_chroma_collection()
@@ -60,35 +63,50 @@ def ingest_documents(uploaded_files) -> dict:
             docs = load_file(uploaded_file)
             chunks = chunk_documents(docs)
 
-            file_ingested = 0
-            file_skipped = 0
+            # Build all IDs upfront, then batch-check for duplicates
+            all_ids = [
+                generate_doc_id(uploaded_file.name, chunk.page_content, i)
+                for i, chunk in enumerate(chunks)
+            ]
 
-            for i, chunk in enumerate(chunks):
-                doc_id = generate_doc_id(
-                    uploaded_file.name, chunk.page_content, i
-                )
+            # Batch duplicate check — much faster than one-by-one
+            existing_ids: set[str] = set()
+            try:
+                existing = collection.get(ids=all_ids)
+                existing_ids = set(existing["ids"])
+            except Exception:
+                pass  # If batch get fails, fall through to per-chunk upsert
 
-                # Duplicate check
-                existing = collection.get(ids=[doc_id])
-                if len(existing["ids"]) > 0:
-                    file_skipped += 1
-                    continue
+            new_chunks = [
+                (doc_id, chunk, i)
+                for i, (doc_id, chunk) in enumerate(zip(all_ids, chunks))
+                if doc_id not in existing_ids
+            ]
+            total_skipped += len(chunks) - len(new_chunks)
 
-                # Embed and store
-                vector = embeddings.embed_documents([chunk.page_content])[0]
-                collection.upsert(
-                    ids=[doc_id],
-                    embeddings=[vector],
-                    documents=[chunk.page_content],
-                    metadatas=[{
+            # Batch embed and store in fixed-size batches
+            for batch_start in range(0, len(new_chunks), _INGEST_BATCH_SIZE):
+                batch = new_chunks[batch_start: batch_start + _INGEST_BATCH_SIZE]
+                batch_ids = [item[0] for item in batch]
+                batch_texts = [item[1].page_content for item in batch]
+                batch_metas = [
+                    {
                         "source": uploaded_file.name,
-                        "chunk_index": i,
-                    }],
-                )
-                file_ingested += 1
+                        "chunk_index": item[2],
+                        "page": str(item[1].metadata.get("page", "")),
+                    }
+                    for item in batch
+                ]
 
-            total_ingested += file_ingested
-            total_skipped += file_skipped
+                batch_vectors = embeddings.embed_documents(batch_texts)
+                collection.upsert(
+                    ids=batch_ids,
+                    embeddings=batch_vectors,
+                    documents=batch_texts,
+                    metadatas=batch_metas,
+                )
+                total_ingested += len(batch)
+
             processed.append(uploaded_file.name)
 
         except Exception as e:
@@ -123,12 +141,18 @@ def query_vector_store(query: str) -> list[dict]:
         ):
             score = 1 - dist
             if score >= SIMILARITY_THRESHOLD:
+                source = meta.get("source", "unknown")
+                page = meta.get("page", "")
+                source_label = f"{source}, p.{page}" if page else source
                 chunks.append({
                     "text": doc,
-                    "source": meta.get("source", "unknown"),
+                    "source": source_label,
+                    "page": page,
                     "score": round(score, 3),
                 })
 
+    # Sort by score descending so Claude sees the most relevant chunks first
+    chunks.sort(key=lambda c: c["score"], reverse=True)
     return chunks
 
 
