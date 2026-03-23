@@ -1,0 +1,21 @@
+# Environment
+.env
+.venv/
+__pycache__/
+*.pyc
+
+# Data
+chroma_db/
+chat_history.db
+*.db-journal
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# UV
+uv.lock
