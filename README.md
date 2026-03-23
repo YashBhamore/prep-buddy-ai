@@ -126,8 +126,21 @@ All tuneable parameters are in `config.py`:
 3. **Generation**: Retrieved context + chat history → Claude API with streaming → response with source citations
 4. **Persistence**: Chat messages are saved to SQLite → conversations can be loaded/deleted across sessions
 
-## Author
+## Contributors
 
 **Yash Bhamore**
 - GitHub: [YashBhamore](https://github.com/YashBhamore)
 - LinkedIn: [yash-bhamore](https://linkedin.com/in/yash-bhamore)
+
+**Darsh Patel**
+- Contributor: Prompt Engineering and QA
+
+## Role Ownership
+
+| Role | Contributor | Ownership |
+|------|-------------|-----------|
+| Corpus Architect | Yash Bhamore | Document ingestion and corpus handling in `document_processor.py` |
+| Pipeline Engineer | Yash Bhamore | Retrieval pipeline, vector store, orchestration, and configuration in `agent.py`, `vector_store.py`, and `config.py` |
+| UX Lead | Yash Bhamore | Streamlit experience and app flow in `app.py` |
+| Prompt Engineer | Darsh Patel | Prompt design, instruction tuning, and response behavior |
+| QA Lead | Darsh Patel | Validation, testing support, and demo review |
