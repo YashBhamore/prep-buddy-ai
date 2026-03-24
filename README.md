@@ -13,6 +13,9 @@ Prep Buddy AI is a document-based learning assistant built with **Anthropic Clau
 - **Duplicate Detection** — Content-addressed hashing prevents redundant indexing
 - **Source Citations** — Every answer includes scored source references
 
+## Working Demo 
+**https://drive.google.com/file/d/1J4373pYnotAGapEz_OmxasrbQiGVGcEy/view?usp=sharing**
+
 ## Architecture
 
 ```
@@ -132,7 +135,7 @@ All tuneable parameters are in `config.py`:
 - GitHub: [YashBhamore](https://github.com/YashBhamore)
 - LinkedIn: [yash-bhamore](https://linkedin.com/in/yash-bhamore)
 
-**Darsh Patel**
+**Darsh Joshi**
 - Contributor: Prompt Engineering and QA
 
 ## Role Ownership
