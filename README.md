@@ -145,5 +145,5 @@ All tuneable parameters are in `config.py`:
 | Corpus Architect | Yash Bhamore | Document ingestion and corpus handling in `document_processor.py` |
 | Pipeline Engineer | Yash Bhamore | Retrieval pipeline, vector store, orchestration, and configuration in `agent.py`, `vector_store.py`, and `config.py` |
 | UX Lead | Yash Bhamore | Streamlit experience and app flow in `app.py` |
-| Prompt Engineer | Darsh Patel | Prompt design, instruction tuning, and response behavior |
-| QA Lead | Darsh Patel | Validation, testing support, and demo review |
+| Prompt Engineer | Darsh Joshi | Prompt design, instruction tuning, and response behavior |
+| QA Lead | Darsh Joshi | Validation, testing support, and demo review |
